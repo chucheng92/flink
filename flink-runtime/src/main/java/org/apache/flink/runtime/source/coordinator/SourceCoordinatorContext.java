@@ -619,7 +619,7 @@ public class SourceCoordinatorContext<SplitT extends SourceSplit>
             }
 
             throw new IllegalStateException(
-                    String.format(
+                    java.lang.String.format(
                             "Subtask %d (#%d) is not ready yet to receive events.",
                             subtaskIndex, attemptNumber));
         }

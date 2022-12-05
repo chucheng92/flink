@@ -541,7 +541,6 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                 operatorName,
                 subtask,
                 attemptNumber);
-
         // request splits from the enumerator only if the enumerator has un-assigned splits
         // this helps to reduce unnecessary split requests to the enumerator
         if (!context.hasNoMoreSplits(subtask)) {

@@ -223,6 +223,7 @@ public class HybridSourceSplitEnumeratorTest {
 
         enumerator = (HybridSourceSplitEnumerator) source.createEnumerator(context);
         enumerator.start();
+
         // mock enumerator assigns splits once all readers are registered
         // At this time, hasNoMoreSplit check will call context.signalIntermediateNoMoreSplits
         registerReader(context, enumerator, SUBTASK0);

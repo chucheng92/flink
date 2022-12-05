@@ -102,7 +102,7 @@ public class HybridSourceSplitEnumerator
 
     @Override
     public void handleSplitRequest(int subtaskId, String requesterHostname) {
-        LOG.debug(
+        LOG.info(
                 "handleSplitRequest subtask={} sourceIndex={} pendingSplits={}",
                 subtaskId,
                 currentSourceIndex,
@@ -155,7 +155,7 @@ public class HybridSourceSplitEnumerator
         if (splitsBySource != null) {
             List<HybridSourceSplit> splits = splitsBySource.remove(sourceIndex);
             if (splits != null && !splits.isEmpty()) {
-                LOG.debug("Restoring splits to subtask={} {}", subtaskId, splits);
+                LOG.info("Restoring splits to subtask={} {}", subtaskId, splits);
                 context.assignSplits(
                         new SplitsAssignment<>(Collections.singletonMap(subtaskId, splits)));
                 checkAndSignalNoMoreSplits(context, subtaskId, sourceIndex, sources.size());
@@ -166,7 +166,7 @@ public class HybridSourceSplitEnumerator
         }
 
         if (sourceIndex == currentSourceIndex) {
-            LOG.debug("adding reader subtask={} sourceIndex={}", subtaskId, currentSourceIndex);
+            LOG.info("adding reader subtask={} sourceIndex={}", subtaskId, currentSourceIndex);
             currentEnumerator.addReader(subtaskId);
         }
     }
@@ -206,7 +206,7 @@ public class HybridSourceSplitEnumerator
                             subtaskId,
                             k -> {
                                 // first time we see reader after cold start or recovery
-                                LOG.debug(
+                                LOG.info(
                                         "New reader subtask={} sourceIndex={}",
                                         subtaskId,
                                         srfe.sourceIndex());

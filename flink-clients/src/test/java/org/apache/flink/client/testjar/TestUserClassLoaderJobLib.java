@@ -18,8 +18,8 @@
 
 package org.apache.flink.client.testjar;
 
-/** This class is depended by {@link TestUserClassLoaderJob}. */
-class TestUserClassLoaderJobLib {
+/** This class is depended on {@link TestUserClassLoaderJob}. */
+public class TestUserClassLoaderJobLib {
 
     int getValue() {
         return 0;

@@ -65,6 +65,7 @@ public class StaticFileSplitEnumerator
             SplitEnumeratorContext<FileSourceSplit> context, FileSplitAssigner splitAssigner) {
         this.context = checkNotNull(context);
         this.splitAssigner = checkNotNull(splitAssigner);
+        System.out.println("StaticFileSplitEnumerator:" + this);
     }
 
     @Override
