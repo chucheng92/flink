@@ -18,6 +18,7 @@
 
 package org.apache.flink.table.planner.operations;
 
+import org.apache.flink.sql.parser.SqlLikeType;
 import org.apache.flink.sql.parser.ddl.SqlAddJar;
 import org.apache.flink.sql.parser.ddl.SqlAddPartitions;
 import org.apache.flink.sql.parser.ddl.SqlAddReplaceColumns;
@@ -1013,7 +1014,12 @@ public class SqlToOperationConverter {
 
     /** Convert SHOW CATALOGS statement. */
     private Operation convertShowCatalogs(SqlShowCatalogs sqlShowCatalogs) {
-        return new ShowCatalogsOperation();
+        SqlLikeType likeType = sqlShowCatalogs.getLikeType();
+        if (likeType == null) {
+            return new ShowCatalogsOperation();
+        }
+        return new ShowCatalogsOperation(
+                likeType.name(), sqlShowCatalogs.isNotLike(), sqlShowCatalogs.getLikeSqlPattern());
     }
 
     /** Convert SHOW CURRENT CATALOG statement. */

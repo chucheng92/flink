@@ -19,10 +19,27 @@
 package org.apache.flink.table.operations;
 
 /** Operation to describe a SHOW CATALOGS statement. */
-public class ShowCatalogsOperation implements ShowOperation {
+public class ShowCatalogsOperation extends SupportsShowLikeOperation {
+
+    public ShowCatalogsOperation() {
+        super();
+    }
+
+    public ShowCatalogsOperation(String likeType, boolean notLike, String likePattern) {
+        super(likeType, notLike, likePattern);
+    }
 
     @Override
     public String asSummaryString() {
-        return "SHOW CATALOGS";
+        StringBuilder builder = new StringBuilder().append("SHOW CATALOGS");
+        if (isWithLike()) {
+            if (isNotLike()) {
+                builder.append(
+                        String.format(" NOT %s '%s'", getLikeType().name(), getLikePattern()));
+            } else {
+                builder.append(String.format(" %s '%s'", getLikeType().name(), getLikePattern()));
+            }
+        }
+        return builder.toString();
     }
 }

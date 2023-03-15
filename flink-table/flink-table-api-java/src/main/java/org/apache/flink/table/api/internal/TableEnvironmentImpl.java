@@ -112,6 +112,7 @@ import org.apache.flink.table.operations.ShowViewsOperation;
 import org.apache.flink.table.operations.SinkModifyOperation;
 import org.apache.flink.table.operations.SourceQueryOperation;
 import org.apache.flink.table.operations.StatementSetOperation;
+import org.apache.flink.table.operations.SupportsShowLikeOperation;
 import org.apache.flink.table.operations.TableSourceQueryOperation;
 import org.apache.flink.table.operations.UnloadModuleOperation;
 import org.apache.flink.table.operations.UseCatalogOperation;
@@ -1236,7 +1237,9 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
             catalogManager.setCurrentDatabase(useDatabaseOperation.getDatabaseName());
             return TableResultImpl.TABLE_RESULT_OK;
         } else if (operation instanceof ShowCatalogsOperation) {
-            return buildShowResult("catalog name", listCatalogs());
+            ShowCatalogsOperation showCatalogsOperation = (ShowCatalogsOperation) operation;
+            return buildSupportsShowLikeResult(
+                    showCatalogsOperation, "catalog name", listCatalogs());
         } else if (operation instanceof ShowCreateTableOperation) {
             ShowCreateTableOperation showCreateTableOperation =
                     (ShowCreateTableOperation) operation;
@@ -1673,6 +1676,36 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
                                 true,
                                 false))
                 .build();
+    }
+
+    /** Common usage for show with like operation. */
+    private TableResultInternal buildSupportsShowLikeResult(
+            SupportsShowLikeOperation supportsShowLikeOperation, String colName, String[] objects) {
+        String[] rows = objects.clone();
+        if (supportsShowLikeOperation.isWithLike()) {
+            rows =
+                    Arrays.stream(rows)
+                            .filter(
+                                    row -> {
+                                        if (supportsShowLikeOperation.isIlike()) {
+                                            return supportsShowLikeOperation.isNotLike()
+                                                    != SqlLikeUtils.ilike(
+                                                            row,
+                                                            supportsShowLikeOperation
+                                                                    .getLikePattern(),
+                                                            "\\");
+                                        } else {
+                                            return supportsShowLikeOperation.isNotLike()
+                                                    != SqlLikeUtils.like(
+                                                            row,
+                                                            supportsShowLikeOperation
+                                                                    .getLikePattern(),
+                                                            "\\");
+                                        }
+                                    })
+                            .toArray(String[]::new);
+        }
+        return buildShowResult(colName, rows);
     }
 
     /**

@@ -18,7 +18,7 @@
 
 package org.apache.flink.sql.parser.dql;
 
-import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperator;
@@ -30,13 +30,18 @@ import java.util.Collections;
 import java.util.List;
 
 /** SHOW CATALOGS sql call. */
-public class SqlShowCatalogs extends SqlCall {
+public class SqlShowCatalogs extends SupportsShowLikeSqlCall {
 
     public static final SqlSpecialOperator OPERATOR =
             new SqlSpecialOperator("SHOW CATALOGS", SqlKind.OTHER);
 
     public SqlShowCatalogs(SqlParserPos pos) {
         super(pos);
+    }
+
+    public SqlShowCatalogs(
+            SqlParserPos pos, String likeType, boolean notLike, SqlCharStringLiteral likeLiteral) {
+        super(pos, likeType, notLike, likeLiteral);
     }
 
     @Override
@@ -52,5 +57,13 @@ public class SqlShowCatalogs extends SqlCall {
     @Override
     public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
         writer.keyword("SHOW CATALOGS");
+        if (isWithLike()) {
+            if (isNotLike()) {
+                writer.keyword(
+                        String.format("NOT %s '%s'", getLikeType().name(), getLikeSqlPattern()));
+            } else {
+                writer.keyword(String.format("%s '%s'", getLikeType().name(), getLikeSqlPattern()));
+            }
+        }
     }
 }

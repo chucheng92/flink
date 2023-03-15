@@ -50,11 +50,39 @@ boolean IfNotExistsOpt() :
 */
 SqlShowCatalogs SqlShowCatalogs() :
 {
+    SqlParserPos pos;
+    String likeType = null;
+    boolean notLike = false;
+    SqlCharStringLiteral likeLiteral = null;
 }
 {
     <SHOW> <CATALOGS>
+    { pos = getPos(); }
+    [
+        [
+            <NOT>
+            {
+                notLike = true;
+            }
+        ]
+        (
+            <LIKE>  <QUOTED_STRING>
+            {
+                likeType = "LIKE";
+                String likeCondition1 = SqlParserUtil.parseString(token.image);
+                likeLiteral = SqlLiteral.createCharString(likeCondition1, getPos());
+            }
+        |
+            <ILIKE>  <QUOTED_STRING>
+            {
+                likeType = "ILIKE";
+                String likeCondition2 = SqlParserUtil.parseString(token.image);
+                likeLiteral = SqlLiteral.createCharString(likeCondition2, getPos());
+            }
+        )
+    ]
     {
-        return new SqlShowCatalogs(getPos());
+        return new SqlShowCatalogs(pos.plus(getPos()), likeType, notLike, likeLiteral);
     }
 }
 
