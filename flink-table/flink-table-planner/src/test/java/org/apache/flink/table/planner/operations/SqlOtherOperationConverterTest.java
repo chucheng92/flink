@@ -37,6 +37,7 @@ import org.apache.flink.table.operations.command.RemoveJarOperation;
 import org.apache.flink.table.operations.command.ResetOperation;
 import org.apache.flink.table.operations.command.SetOperation;
 import org.apache.flink.table.operations.command.ShowJarsOperation;
+import org.apache.flink.table.operations.decorators.LikeOperationDecorator;
 import org.apache.flink.table.planner.parse.ExtendedParser;
 
 import org.junit.jupiter.api.Test;
@@ -153,11 +154,6 @@ public class SqlOtherOperationConverterTest extends SqlToOperationConverterTestB
 
         final ShowCatalogsOperation showCatalogsOperation1 = (ShowCatalogsOperation) operation1;
         assertThat(showCatalogsOperation1.asSummaryString()).isEqualTo("SHOW CATALOGS");
-        assertThat(showCatalogsOperation1.isWithLike()).isFalse();
-        assertThat(showCatalogsOperation1.isLike()).isFalse();
-        assertThat(showCatalogsOperation1.isIlike()).isFalse();
-        assertThat(showCatalogsOperation1.isNotLike()).isFalse();
-        assertThat(showCatalogsOperation1.getLikeType()).isNull();
 
         // -------------- The following cases are used to detect LIKE --------------
 
@@ -167,21 +163,19 @@ public class SqlOtherOperationConverterTest extends SqlToOperationConverterTestB
         Operation operation2 = parse(sql2);
         Operation operation3 = parse(sql3);
 
-        assertThat(operation2).isInstanceOf(ShowCatalogsOperation.class);
-        assertThat(operation3).isInstanceOf(ShowCatalogsOperation.class);
+        assertThat(operation2).isInstanceOf(LikeOperationDecorator.class);
+        assertThat(operation3).isInstanceOf(LikeOperationDecorator.class);
 
-        final ShowCatalogsOperation showCatalogsOperation2 = (ShowCatalogsOperation) operation2;
+        final LikeOperationDecorator showCatalogsOperation2 = (LikeOperationDecorator) operation2;
         assertThat(showCatalogsOperation2.asSummaryString()).isEqualTo("SHOW CATALOGS LIKE 'c%'");
-        assertThat(showCatalogsOperation2.isWithLike()).isTrue();
         assertThat(showCatalogsOperation2.isLike()).isTrue();
         assertThat(showCatalogsOperation2.isIlike()).isFalse();
         assertThat(showCatalogsOperation2.isNotLike()).isFalse();
         assertThat(showCatalogsOperation2.getLikeType()).isNotNull();
 
-        final ShowCatalogsOperation showCatalogsOperation3 = (ShowCatalogsOperation) operation3;
+        final LikeOperationDecorator showCatalogsOperation3 = (LikeOperationDecorator) operation3;
         assertThat(showCatalogsOperation3.asSummaryString())
                 .isEqualTo("SHOW CATALOGS NOT LIKE 'c%'");
-        assertThat(showCatalogsOperation3.isWithLike()).isTrue();
         assertThat(showCatalogsOperation3.isLike()).isTrue();
         assertThat(showCatalogsOperation3.isIlike()).isFalse();
         assertThat(showCatalogsOperation3.isNotLike()).isTrue();
@@ -195,21 +189,19 @@ public class SqlOtherOperationConverterTest extends SqlToOperationConverterTestB
         Operation operation4 = parse(sql4);
         Operation operation5 = parse(sql5);
 
-        assertThat(operation4).isInstanceOf(ShowCatalogsOperation.class);
-        assertThat(operation5).isInstanceOf(ShowCatalogsOperation.class);
+        assertThat(operation4).isInstanceOf(LikeOperationDecorator.class);
+        assertThat(operation5).isInstanceOf(LikeOperationDecorator.class);
 
-        final ShowCatalogsOperation showCatalogsOperation4 = (ShowCatalogsOperation) operation4;
+        final LikeOperationDecorator showCatalogsOperation4 = (LikeOperationDecorator) operation4;
         assertThat(showCatalogsOperation4.asSummaryString()).isEqualTo("SHOW CATALOGS ILIKE 'c%'");
-        assertThat(showCatalogsOperation4.isWithLike()).isTrue();
         assertThat(showCatalogsOperation4.isLike()).isFalse();
         assertThat(showCatalogsOperation4.isIlike()).isTrue();
         assertThat(showCatalogsOperation4.isNotLike()).isFalse();
         assertThat(showCatalogsOperation4.getLikeType()).isNotNull();
 
-        final ShowCatalogsOperation showCatalogsOperation5 = (ShowCatalogsOperation) operation5;
+        final LikeOperationDecorator showCatalogsOperation5 = (LikeOperationDecorator) operation5;
         assertThat(showCatalogsOperation5.asSummaryString())
                 .isEqualTo("SHOW CATALOGS NOT ILIKE 'c%'");
-        assertThat(showCatalogsOperation5.isWithLike()).isTrue();
         assertThat(showCatalogsOperation5.isLike()).isFalse();
         assertThat(showCatalogsOperation5.isIlike()).isTrue();
         assertThat(showCatalogsOperation5.isNotLike()).isTrue();

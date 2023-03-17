@@ -78,6 +78,7 @@
     "org.apache.flink.sql.parser.ddl.SqlUseModules"
     "org.apache.flink.sql.parser.ddl.SqlWatermark"
     "org.apache.flink.sql.parser.ddl.SqlAnalyzeTable"
+    "org.apache.flink.sql.parser.decorators.LikeSqlCallDecorator"
     "org.apache.flink.sql.parser.dml.RichSqlInsert"
     "org.apache.flink.sql.parser.dml.RichSqlInsertKeyword"
     "org.apache.flink.sql.parser.dml.SqlBeginStatementSet"

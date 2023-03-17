@@ -16,13 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.operations;
+package org.apache.flink.table.operations.decorators;
 
-/** Operation to describe a SHOW CATALOGS statement. */
-public class ShowCatalogsOperation implements ShowOperation {
+import org.apache.flink.table.operations.Operation;
 
-    @Override
-    public String asSummaryString() {
-        return "SHOW CATALOGS";
+import javax.annotation.Nonnull;
+
+/**
+ * Abstract decorator class for operations which offer various different abilities. With operation
+ * decorator, we don't need to modify the original operation classes, and they will automatically
+ * get the new capabilities. Even, multiple decorators can be used to decorate operations.
+ */
+public abstract class OperationDecorator implements Operation {
+
+    protected final Operation operation;
+
+    public OperationDecorator(@Nonnull Operation operation) {
+        this.operation = operation;
+    }
+
+    public Operation getOperation() {
+        return operation;
     }
 }

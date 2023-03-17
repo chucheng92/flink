@@ -16,13 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.operations;
+package org.apache.flink.sql.parser.decorators;
 
-/** Operation to describe a SHOW CATALOGS statement. */
-public class ShowCatalogsOperation implements ShowOperation {
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.parser.SqlParserPos;
 
-    @Override
-    public String asSummaryString() {
-        return "SHOW CATALOGS";
+import javax.annotation.Nonnull;
+
+/**
+ * Abstract decorator class for sql calls which offer various different abilities. With call
+ * decorator, we don't need to modify the original sql call classes, and they will automatically get
+ * the new capabilities. Even, multiple decorators can be used to decorate sql calls.
+ */
+public abstract class SqlCallDecorator extends SqlCall {
+
+    protected final SqlCall sqlCall;
+
+    public SqlCallDecorator(SqlParserPos pos, @Nonnull SqlCall sqlCall) {
+        super(pos);
+        this.sqlCall = sqlCall;
+    }
+
+    public SqlCall getSqlCall() {
+        return sqlCall;
     }
 }

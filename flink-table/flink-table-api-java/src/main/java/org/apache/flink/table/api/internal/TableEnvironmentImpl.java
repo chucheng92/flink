@@ -112,7 +112,6 @@ import org.apache.flink.table.operations.ShowViewsOperation;
 import org.apache.flink.table.operations.SinkModifyOperation;
 import org.apache.flink.table.operations.SourceQueryOperation;
 import org.apache.flink.table.operations.StatementSetOperation;
-import org.apache.flink.table.operations.SupportsShowLikeOperation;
 import org.apache.flink.table.operations.TableSourceQueryOperation;
 import org.apache.flink.table.operations.UnloadModuleOperation;
 import org.apache.flink.table.operations.UseCatalogOperation;
@@ -149,6 +148,9 @@ import org.apache.flink.table.operations.ddl.DropPartitionsOperation;
 import org.apache.flink.table.operations.ddl.DropTableOperation;
 import org.apache.flink.table.operations.ddl.DropTempSystemFunctionOperation;
 import org.apache.flink.table.operations.ddl.DropViewOperation;
+import org.apache.flink.table.operations.decorators.LikeOperationDecorator;
+import org.apache.flink.table.operations.decorators.OperationDecorator;
+import org.apache.flink.table.operations.decorators.OperatorDecoratorUtils;
 import org.apache.flink.table.operations.utils.OperationTreeBuilder;
 import org.apache.flink.table.resource.ResourceManager;
 import org.apache.flink.table.resource.ResourceType;
@@ -985,6 +987,11 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
         if (tableResult.isPresent()) {
             return tableResult.get();
         }
+        // has operation decorators or not, write here to avoid writing this code for every
+        // if-else logic.
+        List<OperationDecorator> operationDecorators =
+                OperatorDecoratorUtils.findOperationDecorators(operation);
+        operation = OperatorDecoratorUtils.unwrapOperationDecorators(operation);
         // otherwise, fall back to internal implementation
         if (operation instanceof ModifyOperation) {
             return executeInternal(Collections.singletonList((ModifyOperation) operation));
@@ -1237,9 +1244,12 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
             catalogManager.setCurrentDatabase(useDatabaseOperation.getDatabaseName());
             return TableResultImpl.TABLE_RESULT_OK;
         } else if (operation instanceof ShowCatalogsOperation) {
-            ShowCatalogsOperation showCatalogsOperation = (ShowCatalogsOperation) operation;
-            return buildSupportsShowLikeResult(
-                    showCatalogsOperation, "catalog name", listCatalogs());
+            String colName = "catalog name";
+            if (operationDecorators.isEmpty()) {
+                return buildShowResult(colName, listCatalogs());
+            } else {
+                return buildOperationDecoratorResult(operationDecorators, colName, listCatalogs());
+            }
         } else if (operation instanceof ShowCreateTableOperation) {
             ShowCreateTableOperation showCreateTableOperation =
                     (ShowCreateTableOperation) operation;
@@ -1678,32 +1688,34 @@ public class TableEnvironmentImpl implements TableEnvironmentInternal {
                 .build();
     }
 
-    /** Common usage for show with like operation. */
-    private TableResultInternal buildSupportsShowLikeResult(
-            SupportsShowLikeOperation supportsShowLikeOperation, String colName, String[] objects) {
+    /** Common usage for build operation results with various decorators. */
+    private TableResultInternal buildOperationDecoratorResult(
+            List<OperationDecorator> operationDecorators, String colName, String[] objects) {
         String[] rows = objects.clone();
-        if (supportsShowLikeOperation.isWithLike()) {
-            rows =
-                    Arrays.stream(rows)
-                            .filter(
-                                    row -> {
-                                        if (supportsShowLikeOperation.isIlike()) {
-                                            return supportsShowLikeOperation.isNotLike()
-                                                    != SqlLikeUtils.ilike(
-                                                            row,
-                                                            supportsShowLikeOperation
-                                                                    .getLikePattern(),
-                                                            "\\");
-                                        } else {
-                                            return supportsShowLikeOperation.isNotLike()
-                                                    != SqlLikeUtils.like(
-                                                            row,
-                                                            supportsShowLikeOperation
-                                                                    .getLikePattern(),
-                                                            "\\");
-                                        }
-                                    })
-                            .toArray(String[]::new);
+        for (OperationDecorator decorator : operationDecorators) {
+            if (decorator instanceof LikeOperationDecorator) {
+                LikeOperationDecorator likeDecorator = (LikeOperationDecorator) decorator;
+                rows =
+                        Arrays.stream(rows)
+                                .filter(
+                                        row -> {
+                                            if (likeDecorator.isIlike()) {
+                                                return likeDecorator.isNotLike()
+                                                        != SqlLikeUtils.ilike(
+                                                                row,
+                                                                likeDecorator.getLikePattern(),
+                                                                "\\");
+                                            } else {
+                                                return likeDecorator.isNotLike()
+                                                        != SqlLikeUtils.like(
+                                                                row,
+                                                                likeDecorator.getLikePattern(),
+                                                                "\\");
+                                            }
+                                        })
+                                .toArray(String[]::new);
+            }
+            // other decorators ...
         }
         return buildShowResult(colName, rows);
     }

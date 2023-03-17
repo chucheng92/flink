@@ -18,7 +18,6 @@
 
 package org.apache.flink.table.planner.operations;
 
-import org.apache.flink.sql.parser.SqlLikeType;
 import org.apache.flink.sql.parser.ddl.SqlAddJar;
 import org.apache.flink.sql.parser.ddl.SqlAddPartitions;
 import org.apache.flink.sql.parser.ddl.SqlAddReplaceColumns;
@@ -64,6 +63,9 @@ import org.apache.flink.sql.parser.ddl.SqlUseDatabase;
 import org.apache.flink.sql.parser.ddl.SqlUseModules;
 import org.apache.flink.sql.parser.ddl.resource.SqlResource;
 import org.apache.flink.sql.parser.ddl.resource.SqlResourceType;
+import org.apache.flink.sql.parser.decorators.LikeSqlCallDecorator;
+import org.apache.flink.sql.parser.decorators.SqlCallDecorator;
+import org.apache.flink.sql.parser.decorators.SqlCallDecoratorUtils;
 import org.apache.flink.sql.parser.dml.RichSqlInsert;
 import org.apache.flink.sql.parser.dml.SqlBeginStatementSet;
 import org.apache.flink.sql.parser.dml.SqlCompileAndExecutePlan;
@@ -191,6 +193,7 @@ import org.apache.flink.table.operations.ddl.DropPartitionsOperation;
 import org.apache.flink.table.operations.ddl.DropTableOperation;
 import org.apache.flink.table.operations.ddl.DropTempSystemFunctionOperation;
 import org.apache.flink.table.operations.ddl.DropViewOperation;
+import org.apache.flink.table.operations.decorators.LikeOperationDecorator;
 import org.apache.flink.table.planner.calcite.FlinkPlannerImpl;
 import org.apache.flink.table.planner.hint.FlinkHints;
 import org.apache.flink.table.planner.utils.Expander;
@@ -206,6 +209,7 @@ import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.hint.HintStrategyTable;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.logical.LogicalTableModify;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlDelete;
 import org.apache.calcite.sql.SqlDialect;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -289,6 +293,13 @@ public class SqlToOperationConverter {
         beforeConversion();
         SqlToOperationConverter converter =
                 new SqlToOperationConverter(flinkPlanner, catalogManager);
+        // has sql call decorators or not, write here to avoid writing this code for every
+        // if-else logic.
+        List<SqlCallDecorator> sqlCallDecorators = null;
+        if (validated instanceof SqlCall) {
+            sqlCallDecorators = SqlCallDecoratorUtils.findSqlCallDecorators((SqlCall) validated);
+            validated = SqlCallDecoratorUtils.unwrapSqlCallDecorators((SqlCall) validated);
+        }
         if (validated instanceof SqlCreateCatalog) {
             return Optional.of(converter.convertCreateCatalog((SqlCreateCatalog) validated));
         } else if (validated instanceof SqlDropCatalog) {
@@ -296,7 +307,8 @@ public class SqlToOperationConverter {
         } else if (validated instanceof SqlLoadModule) {
             return Optional.of(converter.convertLoadModule((SqlLoadModule) validated));
         } else if (validated instanceof SqlShowCatalogs) {
-            return Optional.of(converter.convertShowCatalogs((SqlShowCatalogs) validated));
+            return Optional.of(
+                    converter.convertShowCatalogs((SqlShowCatalogs) validated, sqlCallDecorators));
         } else if (validated instanceof SqlShowCurrentCatalog) {
             return Optional.of(
                     converter.convertShowCurrentCatalog((SqlShowCurrentCatalog) validated));
@@ -1013,13 +1025,26 @@ public class SqlToOperationConverter {
     }
 
     /** Convert SHOW CATALOGS statement. */
-    private Operation convertShowCatalogs(SqlShowCatalogs sqlShowCatalogs) {
-        SqlLikeType likeType = sqlShowCatalogs.getLikeType();
-        if (likeType == null) {
+    private Operation convertShowCatalogs(
+            SqlShowCatalogs sqlShowCatalogs, List<SqlCallDecorator> sqlCallDecorators) {
+        if (sqlCallDecorators == null || sqlCallDecorators.isEmpty()) {
             return new ShowCatalogsOperation();
         }
-        return new ShowCatalogsOperation(
-                likeType.name(), sqlShowCatalogs.isNotLike(), sqlShowCatalogs.getLikeSqlPattern());
+        Operation decoratedOperation = new ShowCatalogsOperation();
+        for (SqlCallDecorator decorator : sqlCallDecorators) {
+            if (decorator instanceof LikeSqlCallDecorator) {
+                LikeSqlCallDecorator likeSqlCallDecorator = (LikeSqlCallDecorator) decorator;
+                decoratedOperation =
+                        new LikeOperationDecorator(
+                                decoratedOperation,
+                                likeSqlCallDecorator.getLikeType().name(),
+                                likeSqlCallDecorator.isNotLike(),
+                                likeSqlCallDecorator.getLikeSqlPattern());
+            }
+            // other decorators ...
+        }
+
+        return decoratedOperation;
     }
 
     /** Convert SHOW CURRENT CATALOG statement. */

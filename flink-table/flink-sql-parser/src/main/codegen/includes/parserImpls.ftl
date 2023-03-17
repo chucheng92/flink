@@ -48,7 +48,7 @@ boolean IfNotExistsOpt() :
 /**
 * Parse a "Show Catalogs" metadata query command.
 */
-SqlShowCatalogs SqlShowCatalogs() :
+SqlCall SqlShowCatalogs() :
 {
     SqlParserPos pos;
     String likeType = null;
@@ -82,7 +82,12 @@ SqlShowCatalogs SqlShowCatalogs() :
         )
     ]
     {
-        return new SqlShowCatalogs(pos.plus(getPos()), likeType, notLike, likeLiteral);
+        SqlCall sqlShowCatalogs = new SqlShowCatalogs(pos.plus(getPos()));
+        if (likeType == null) {
+            return sqlShowCatalogs;
+        } else {
+            return new LikeSqlCallDecorator(sqlShowCatalogs, likeType, notLike, likeLiteral);
+        }
     }
 }
 

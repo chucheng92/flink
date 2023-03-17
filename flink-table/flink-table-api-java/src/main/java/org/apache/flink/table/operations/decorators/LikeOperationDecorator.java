@@ -16,36 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.flink.table.operations;
+package org.apache.flink.table.operations.decorators;
 
+import org.apache.flink.table.operations.Operation;
 import org.apache.flink.table.operations.utils.OperationLikeType;
 
-import static org.apache.flink.util.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
-/** Abstract show operation supports filter with like. */
-public abstract class SupportsShowLikeOperation implements ShowOperation {
+/** Like decorator offer like filter ability to operations. */
+public class LikeOperationDecorator extends OperationDecorator {
 
     // different like type such as like, ilike
     private final OperationLikeType likeType;
     private final boolean notLike;
     private final String likePattern;
 
-    /** Use when there is no sub-clause. */
-    protected SupportsShowLikeOperation() {
-        this.likeType = null;
-        this.notLike = false;
-        this.likePattern = null;
-    }
-
-    /** Use when there is like. */
-    protected SupportsShowLikeOperation(String likeType, boolean notLike, String likePattern) {
-        if (likeType != null) {
-            this.likeType = OperationLikeType.of(likeType);
-            this.likePattern = checkNotNull(likePattern, "Like pattern must not be null");
-        } else {
-            this.likeType = null;
-            this.likePattern = null;
-        }
+    public LikeOperationDecorator(
+            Operation operation, String likeType, boolean notLike, String likePattern) {
+        super(operation);
+        this.likeType = OperationLikeType.of(likeType);
+        this.likePattern = requireNonNull(likePattern, "Like pattern must not be null");
         this.notLike = notLike;
     }
 
@@ -61,15 +51,22 @@ public abstract class SupportsShowLikeOperation implements ShowOperation {
         return likeType == OperationLikeType.ILIKE;
     }
 
-    public boolean isWithLike() {
-        return isLike() || isIlike();
-    }
-
     public boolean isNotLike() {
         return notLike;
     }
 
     public String getLikePattern() {
         return likePattern;
+    }
+
+    @Override
+    public String asSummaryString() {
+        StringBuilder builder = new StringBuilder(operation.asSummaryString());
+        if (isNotLike()) {
+            builder.append(String.format(" NOT %s '%s'", getLikeType().name(), getLikePattern()));
+        } else {
+            builder.append(String.format(" %s '%s'", getLikeType().name(), getLikePattern()));
+        }
+        return builder.toString();
     }
 }

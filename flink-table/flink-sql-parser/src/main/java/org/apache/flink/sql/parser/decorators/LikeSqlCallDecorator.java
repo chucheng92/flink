@@ -16,43 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.flink.sql.parser.dql;
+package org.apache.flink.sql.parser.decorators;
 
 import org.apache.flink.sql.parser.SqlLikeType;
 
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
-import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlWriter;
 
+import java.util.List;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-/** Abstract show sql call supports filter with like. */
-public abstract class SupportsShowLikeSqlCall extends SqlCall {
+/** Like decorator offer like filter ability to sql calls. */
+public class LikeSqlCallDecorator extends SqlCallDecorator {
 
     // different like type such as like, ilike
-    protected final SqlLikeType likeType;
-    protected final boolean notLike;
-    protected final SqlCharStringLiteral likeLiteral;
+    private final SqlLikeType likeType;
+    private final boolean notLike;
+    private final SqlCharStringLiteral likeLiteral;
 
-    protected SupportsShowLikeSqlCall(SqlParserPos pos) {
-        super(pos);
-        this.likeType = null;
-        this.notLike = false;
-        this.likeLiteral = null;
-    }
-
-    protected SupportsShowLikeSqlCall(
-            SqlParserPos pos, String likeType, boolean notLike, SqlCharStringLiteral likeLiteral) {
-        super(pos);
-        if (likeType != null) {
-            this.likeType = SqlLikeType.of(likeType);
-            this.likeLiteral = requireNonNull(likeLiteral, "Like pattern must not be null");
-        } else {
-            this.likeType = null;
-            this.likeLiteral = null;
-        }
+    public LikeSqlCallDecorator(
+            SqlCall sqlCall, String likeType, boolean notLike, SqlCharStringLiteral likeLiteral) {
+        super(sqlCall.getParserPosition(), sqlCall);
+        this.likeType = SqlLikeType.of(likeType);
+        this.likeLiteral = requireNonNull(likeLiteral, "Like pattern must not be null");
         this.notLike = notLike;
     }
 
@@ -68,10 +59,6 @@ public abstract class SupportsShowLikeSqlCall extends SqlCall {
         return likeType == SqlLikeType.ILIKE;
     }
 
-    public boolean isWithLike() {
-        return isLike() || isILike();
-    }
-
     public boolean isNotLike() {
         return notLike;
     }
@@ -82,5 +69,25 @@ public abstract class SupportsShowLikeSqlCall extends SqlCall {
 
     public String getLikeSqlPattern() {
         return Objects.isNull(likeLiteral) ? null : likeLiteral.getValueAs(String.class);
+    }
+
+    @Override
+    public SqlOperator getOperator() {
+        return sqlCall.getOperator();
+    }
+
+    @Override
+    public List<SqlNode> getOperandList() {
+        return sqlCall.getOperandList();
+    }
+
+    @Override
+    public void unparse(SqlWriter writer, int leftPrec, int rightPrec) {
+        sqlCall.unparse(writer, leftPrec, rightPrec);
+        if (isNotLike()) {
+            writer.keyword(String.format("NOT %s '%s'", getLikeType().name(), getLikeSqlPattern()));
+        } else {
+            writer.keyword(String.format("%s '%s'", getLikeType().name(), getLikeSqlPattern()));
+        }
     }
 }
